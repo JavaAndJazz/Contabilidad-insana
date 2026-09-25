@@ -38,7 +38,19 @@ Guárdalos, los usas en el Paso 3.
 
 (Si sabes usar git/terminal, es simplemente `git init`, `git add .`, `git commit -m "inicial"`, y conectar con tu repo de GitHub — más rápido.)
 
-## Paso 3 — Publicar en Vercel
+## Paso 4 — Restringir el acceso (solo tú y el contador)
+
+Por defecto, cualquiera con el link podía entrar sin pedir nada. Ya la app pide correo y contraseña antes de mostrar algo. Faltan 2 cosas, ambas dentro de Supabase:
+
+1. **Actualiza los permisos de la base de datos.** Ve a **SQL Editor → New query**, pega el contenido de `supabase-schema-auth.sql` (de esta misma carpeta) y dale **Run**. Esto hace que, aunque alguien encuentre la URL de tu base de datos, no pueda leer ni escribir nada sin haber iniciado sesión.
+
+2. **Crea las 2 cuentas (la tuya y la del contador).** Ve a **Authentication** (menú izquierdo) → **Users** → **Add user** → **Create new user**. Pon el correo y la contraseña que quieras para cada persona, y asegúrate de marcar **"Auto Confirm User"** (así no hace falta que confirmen el correo). Repite para la segunda persona.
+
+3. **(Opcional pero recomendado) Bloquea el registro público**, por si alguien intenta crear una cuenta por su cuenta: ve a **Authentication → Providers → Email** y apaga la opción **"Allow new users to sign up"**. Con esto, solo las cuentas que tú creas manualmente pueden entrar.
+
+Después de esto, vuelve a subir el código actualizado a GitHub (esta vez agregando también `src/Login.jsx`, `src/AuthGate.jsx` y el `src/main.jsx` actualizado) y dale **Redeploy** en Vercel.
+
+## Paso 5 — Publicar en Vercel
 
 1. Entra a [vercel.com](https://vercel.com) y crea una cuenta (puedes entrar directo con tu cuenta de GitHub, es lo más fácil).
 2. **Add New → Project**.
