@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { kvGet, kvSet } from './supabaseClient';
+import { kvGet, kvSet, supabase } from './supabaseClient';
 import { 
   BookOpen, Book, FileText, BarChart2, PieChart, 
   Sun, Moon, Plus, Trash2, Save, LayoutDashboard, 
@@ -226,16 +226,17 @@ export default function AccountingApp() {
   const [accNature, setAccNature] = useState('Deudora');
   const [accError, setAccError] = useState('');
 
-  // Sondea la base de datos en la nube cada cierto tiempo mientras la pestaña está activa,
-  // para reflejar cambios hechos por otras personas/dispositivos sin tener que recargar.
+  // Recarga los datos desde la nube: al abrir la app, cuando vuelves a esta pestaña del
+  // navegador (no mientras estás escribiendo), o cuando le das al botón "Actualizar".
   const [pollTick, setPollTick] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Carga inicial (y refrescos periódicos) desde Supabase.
   useEffect(() => {
     let cancelled = false;
 
     const loadAll = async () => {
       try {
+        if (isDataLoaded) setIsRefreshing(true);
         const [acc, trx, inv, rate, dark] = await Promise.all([
           kvGet('procreas_accounts'),
           kvGet('procreas_transactions'),
@@ -257,7 +258,10 @@ export default function AccountingApp() {
           setLoadError('No se pudo conectar con la base de datos en la nube. Revisa tu conexión a internet o la configuración de Supabase (.env).');
         }
       } finally {
-        if (!cancelled) setIsDataLoaded(true);
+        if (!cancelled) {
+          setIsDataLoaded(true);
+          setIsRefreshing(false);
+        }
       }
     };
 
@@ -265,11 +269,18 @@ export default function AccountingApp() {
     return () => { cancelled = true; };
   }, [pollTick]);
 
-  // Refresca los datos cada 20 segundos, para acercarse a "tiempo real" entre dispositivos.
+  // Vuelve a consultar la nube cuando el usuario regresa a esta pestaña del navegador
+  // (ej. estaba en otra app y vuelve). No interrumpe mientras se está escribiendo,
+  // porque solo se dispara al cambiar de pestaña/ventana, no durante el tipeo.
   useEffect(() => {
-    const interval = setInterval(() => setPollTick(t => t + 1), 20000);
-    return () => clearInterval(interval);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setPollTick(t => t + 1);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
+
+  const refreshFromCloud = () => setPollTick(t => t + 1);
 
   // Guardar en la nube (solo después de que la carga inicial terminó,
   // para no pisar los datos guardados con los valores por defecto).
@@ -737,11 +748,25 @@ export default function AccountingApp() {
              <div className={`w-2 h-2 rounded-full ${loadError ? 'bg-red-500' : 'bg-emerald-500'}`}></div>
           </div>
           <button
+            onClick={refreshFromCloud}
+            disabled={isRefreshing}
+            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 mb-2 rounded-lg text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
+            {isRefreshing ? 'Actualizando...' : 'Actualizar datos'}
+          </button>
+          <button
             onClick={() => setDarkMode(!darkMode)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm"
           >
             {darkMode ? <Sun size={16} /> : <Moon size={16} />}
             {darkMode ? 'Modo Claro' : 'Modo Oscuro'}
+          </button>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 mt-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-xs"
+          >
+            Cerrar sesión
           </button>
         </div>
       </div>
