@@ -304,18 +304,6 @@ export default function AccountingApp() {
     }
   }, [darkMode, isDataLoaded]);
 
-  // Pantalla de carga mientras se leen los datos guardados
-  if (!isDataLoaded) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-          <p className="text-slate-500 text-sm">Conectando con la base de datos...</p>
-        </div>
-      </div>
-    );
-  }
-
   const executeResetBalances = () => {
     setIsResetting(true);
     setTimeout(() => {
@@ -1632,6 +1620,20 @@ export default function AccountingApp() {
       </div>
     );
   };
+
+  // Pantalla de carga mientras se leen los datos guardados.
+  // (Va aquí, DESPUÉS de todos los useState/useMemo del componente, porque React exige
+  // que los hooks se ejecuten siempre en el mismo orden en cada render.)
+  if (!isDataLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <p className="text-slate-500 text-sm">Conectando con la base de datos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-200 overflow-hidden relative">
